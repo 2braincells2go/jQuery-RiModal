@@ -1,0 +1,29 @@
+{
+  "name": "jQuery-RiModal",
+  "version": "1.0.0",
+  "description": "A flexible and good looking modal window plugin for jQuery",
+  "main": "jquery.rimodal.js",
+  "scripts": {
+    "test": "gulp test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kensnyder/jQuery-RiModal"
+  },
+  "keywords": [
+    "modal",
+    "popup",
+    "overlay",
+    "window",
+    "lightbox"
+  ],
+  "author": "Ken Snyder",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/kensnyder/jQuery-RiModal/issues"
+  },
+  "homepage": "https://github.com/kensnyder/jQuery-RiModal",
+  "devDependencies": {
+    "gulp": "^3.8.10"
+  }
+}
