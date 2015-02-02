@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <meta charset="UTF-8">
-<title>TODO supply a title</title>
+<title>jQuery-RiModal Demo</title>
 <script src="http://code.jquery.com/jquery-2.1.3.min.js"></script>
 <script src="../src/jquery.rimodal.js"></script>
 <link rel="stylesheet" href="../src/jquery.rimodal.css">
@@ -9,20 +9,34 @@
 
 <div class="main">
 	
-	<p>A simple modal window using ajax: 
-		<a href="#"
-		   id="AjaxExample"
-		   data-modal-height="300"
-		   data-modal-width="450"
-		   data-modal-ajax="assets/ajax.html"
-		   data-modal-title="Ajax Example"
-		>
-		   Open
-		</a>
-	</p>
+	<ol>
+		<li><strong>Ajax</strong> - HTML served via ajax
+			<a href="#"
+			   id="AjaxExample"
+			   data-modal-height="300"
+			   data-modal-width="450"
+			   data-modal-ajax="assets/ajax.html"
+			   data-modal-title="Ajax Example"
+			>
+			   Open
+			</a>
+		</li>
+		<li><strong>Iframe</strong> - HTML served via an iframe
+			<a href="#"
+			   id="IframeExample"
+			   data-modal-height="300"
+			   data-modal-width="450"
+			   data-modal-iframe="assets/iframe.html"
+			   data-modal-title="iframe Example"
+			>
+			   Open
+			</a>
+		</li>
+	</ol>
 	
 	<script>
 		$('#AjaxExample').riModal();
+		$('#IframeExample').riModal();
 	</script>
 	
 </div>
