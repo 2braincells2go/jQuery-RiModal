@@ -1,16 +1,28 @@
 <!DOCTYPE html>
-<!--
-To change this license header, choose License Headers in Project Properties.
-To change this template file, choose Tools | Templates
-and open the template in the editor.
--->
-<html>
-	<head>
-		<title>TODO supply a title</title>
-		<meta charset="UTF-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	</head>
-	<body>
-		<div>TODO write content</div>
-	</body>
-</html>
+<html lang="en">
+<meta charset="UTF-8">
+<title>TODO supply a title</title>
+<script src="http://code.jquery.com/jquery-2.1.3.min.js"></script>
+<script src="../src/jquery.rimodal.js"></script>
+<link rel="stylesheet" href="../src/jquery.rimodal.css">
+<link rel="stylesheet" href="assets/demo.css">
+
+<div class="main">
+	
+	<p>A simple modal window using ajax: 
+		<a href="#"
+		   id="AjaxExample"
+		   data-modal-height="300"
+		   data-modal-width="450"
+		   data-modal-ajax="assets/ajax.html"
+		   data-modal-title="Ajax Example"
+		>
+		   Open
+		</a>
+	</p>
+	
+	<script>
+		$('#AjaxExample').riModal();
+	</script>
+	
+</div>

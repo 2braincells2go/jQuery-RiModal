@@ -1,6 +1,6 @@
 /*! RiModal - A flexible and good looking modal window plugin for jQuery
 * https://github.com/kensnyder/jQuery-RiModal
-* Copyright (c) 2014 Ken Snyder; Licensed MIT */
+* Copyright (c) 2015 Ken Snyder; Licensed MIT */
 (function($, window, document, undefined) {
 	
 	/**
@@ -852,7 +852,7 @@
 					}, self.options.animation_duration / 2)
 				;
 				if (self.options.cover_closes) {
-					self.$cover.click( $.proxy(self, 'close') );
+					self.$cover.on( 'click', $.proxy(self, 'close') );
 				}
 			}
 			else {
@@ -912,7 +912,7 @@
 					*/						
 					self.publish('Opened');
 				});
-			self.$close = self.$dialog.find('.ri-modal-close').click( $.proxy(self, 'close') );
+			self.$close = self.$dialog.find('.ri-modal-close').on( 'click', $.proxy(self, 'close') );
 			self.$content = self.$dialog.find('.ri-modal-content')
 				.css({
 					width: size.width + 'px',
@@ -1301,9 +1301,18 @@
 		}
 	};
 	
+	// Export to jQuery namespace
 	$.RiModal = RiModal;
-	
+
+	/**
+	 * 
+	 * @param {Object} [options]  Same options as $.RiModal constructor plus
+	 * @param {String} [options.event=click]  The event (or space separated list of events) that should open the modal
+	 * @param {String} [options.delegate]  If given, clicks on any child matching this selector should open the modal
+	 * @returns {jQuery}
+	 */
 	$.fn.riModal = function(options) {
+		options = options || {};
 		// todo support delegation
 		var open = function(evt) {
 			evt.preventDefault();
@@ -1322,9 +1331,9 @@
 			modal.open();
 		};
 		if (options.delegate) {
-			return this.on('click', options.delegate, open);
+			return this.on(options.event || 'click', options.delegate, open);
 		}
-		return this.click(open);
+		return this.on(options.event || 'click', open);
 	};
 	
 	//
