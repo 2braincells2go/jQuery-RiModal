@@ -1053,7 +1053,7 @@
 			// width and height
 			if (self.options.width == 'full') {
 				size.width = size.maxWidth;
-				size.left = 12 + size.scrollTop;
+				size.left = 12;
 			}
 			else {
 				size.width = Math.min(parseFloat(self.options.width), size.maxWidth);
