@@ -10,13 +10,13 @@
 	 *   @param {String|Function} [options.title]  The title text to put on the dialog header
 	 *   @param {String|Function|Object} [options.ajax]  A URL from which to download HTML for the content area  
 	 *   @param {String|Function|Object} [options.iframe]  The iframe src to inject into the content area
-	 *   @param {selector|HTMLElement|jQuery|Function|Object} [options.element]  A selector or element to inject into the content area
+	 *   @param {selector|HTMLElement|jQuery|Function|Object|String} [options.element]  A selector, element, or HTML string to inject into the content area
 	 *   @param {String|Function} [options.text]  Text content to inject into the content area
 	 *   @param {selector} [options.delegate]  A selector to which to delegate clicks (jQuery usage only)
 	 *   @param {Number} [options.width=400]  The width of the content area. Use "full" for full width
 	 *   @param {Number} [options.height=300]  The height of the content area. Use "full" for full height
 	 *   @param {Number} [options.animation_duration=400]  The number of milliseconds over which to animate opening and closing
-	 *   @param {Boolean} [options.draggable=true]  If true, allow dragging the dialog box
+	 *   @param {Boolean} [options.draggable=false]  If true, allow dragging the dialog box
 	 *   @param {String} [options.drag_handle=".ri-modal-title"]  The selector for the drag handle
 	 *   @param {Boolean} [options.ghost_while_dragging=true]  If true, set modal contents opacity to 0 while dragging. If false, always show modal contents
 	 *   @param {Boolean} [options.cover=true]  If true, cover the page with a gray div
@@ -27,6 +27,8 @@
 	 *   @param {Object} [options.html]  The html templates to use
 	 *   @param {String} [options.html.cover]  The html for the cover
 	 *   @param {String} [options.html.dialog]  The html for the dialog
+	 *   @param {String} [options.iframe_query_suffix="hexmodal=1"]  A query parameter to add to the end of iframe URLs
+	 *	 @param {String} [options.iframe_poll_interval=50]  Number of milliseconds between polls for iframe document ready and navigation
 	 *   @param {Function} [options.onInit]  A function to call after modal is initialized but nothing has happened
 	 *   @param {Function} [options.onRendered]  A function to call after dialog html has been constructed
 	 *   @param {Function} [options.onCalculated]  A function to call after size and position is calculated
@@ -34,12 +36,18 @@
 	 *   @param {Function} [options.onOpened]  A function to call just after opening the dialog
 	 *   @param {Function} [options.onLoading]  A function to call before content is loaded
 	 *   @param {Function} [options.onLoaded]  A function to call after content is loaded
+	 *   @param {Function} [options.onFrameDocumentReady]  A function to call when framed document has fired DOMDocumentLoaded (if on same domain)
+	 *   @param {Function} [options.onFrameNavigateStart]  A function to call when framed document begins to navigate to another page (if on same domain)
+	 *   @param {Function} [options.onFrameNavigateReady]  A function to call when framed document has fired DOMDocumentLoaded after one or more navigations (if on same domain)
+	 *   @param {Function} [options.onFrameNavigateLoaded]  A function to call when framed document has loaded after one or more navigations
 	 *   @param {Function} [options.onDragging]  A function to call before dragging begins
 	 *   @param {Function} [options.onDragged]  A function to call after dragging stops
 	 *   @param {Function} [options.onResizing]  A function to call before modal is resized
 	 *   @param {Function} [options.onResized]  A function to call after modal is resized
 	 *   @param {Function} [options.onClosing]  A function to call just before closing the dialog
 	 *   @param {Function} [options.onClosed]  A function to call just after closing the dialog
+	 *   @param {Function} [options.onDestroying]  A function to call just before destroying a dialog
+	 *   @param {Function} [options.onDestroyed]  A function to call just after destroying a dialog
 	 * @example
 
 	<!-- Using the $.RiModal constructor -->
@@ -143,6 +151,7 @@
 		position: 'center-middle',
 		offset: {x: 0, y: 0},
 		iframe_query_suffix: 'hexmodal=1',
+		iframe_poll_interval: 50,
 		html: {
 			cover: '<div class="ri-modal-cover"></div>',
 			dialog: 
@@ -235,7 +244,7 @@
 	 * @returns {RiModal}  The newly opened modal instance so it can be closed or manipulated
 	 */
 	RiModal.showMessage = function(message, options) {
-		options = $.extend({
+		options = $.extend(true, {
 			text: message || 'Loading...',
 			html: {
 				cover: RiModal.defaultOptions.html.cover,
@@ -358,7 +367,8 @@
 		 */
 		initialize: function(options) {
 			var self = this;
-			self.options = $.extend(true, {}, RiModal.defaultOptions, options || {});
+			self.options = $.extend(true, {}, RiModal.defaultOptions);
+			self.setOptions(options || {});
 			self.id = uid++;
 			self._setupEvents();
 			/** 
@@ -375,6 +385,16 @@
 			if (self.options.origin) {
 				self.setOrigin(self.options.origin);
 			}
+		},
+		setOptions: function(options) {
+			var self = this;
+			$.extend(true, self.options, options);
+			self.options.draggable = booleanize(self.options.draggable);
+			self.options.ghost_while_dragging = booleanize(self.options.ghost_while_dragging);
+			self.options.cover = booleanize(self.options.cover);
+			self.options.cover_closes = booleanize(self.options.cover_closes);
+			self.options.destroy_on_close = booleanize(self.options.destroy_on_close);
+			return self;
 		},
 		/**
 		 * Setup events on the pubsub system
@@ -575,10 +595,10 @@
 		 * If no specs exists in this.options, look for an href within the origin element.
 		 * @method getContentSpecs
 		 * @return {Object} specs  Specs used by load
-		 * @return {jQuery|Function|undefined} specs.element  The element to append to self.$content
-		 * @return {String|Function|undefined} specs.text  The plain text to set self.$content
-		 * @return {String|ObjectFunction||undefined} specs.ajax  URL or $.ajax options based on which to set self.$content
-		 * @return {String|Function|undefined} specs.iframe  URL to use in iframe element within self.$content
+		 * @return {selector|HTMLElement|jQuery|Function|Object|String|undefined} specs.element  The element to append to this.$content
+		 * @return {String|Function|undefined} specs.text  The plain text to set this.$content
+		 * @return {String|ObjectFunction||undefined} specs.ajax  URL or $.ajax options based on which to set this.$content
+		 * @return {String|Function|undefined} specs.iframe  URL to use in iframe element within this.$content
 		 */		
 		getContentSpecs: function() {
 			var self = this;
@@ -595,8 +615,17 @@
 					specs[this] = self.options[this];
 				}
 			});
+			if (specs.element) {
+				specs.element = $(specs.element);
+			}
 			if (!specs.element && !specs.text && !specs.ajax && !specs.iframe) {
-				specs.iframe = self.origin.getAttribute('href');
+				var href = self.origin.getAttribute('href');
+				if (href.slice(0, 1) == '#') {
+					specs.iframe = href;
+				}
+				else {
+					specs.element = href;
+				}
 			}
 			return specs;
 		},
@@ -617,6 +646,8 @@
 		load: function() {
 			var self = this;
 			var url;
+			var times;
+			var poll;
 			self.$content.removeClass('ri-modal-element ri-modal-text ri-modal-html ri-modal-ajax ri-modal-iframe ri-modal-empty');
 			/** 
 			 * Fired before content is loaded into this.$content
@@ -627,7 +658,7 @@
 	modal.on('Loading', function(event) {
 		if (contentNotAvailable()) {
 			event.preventDefault();
-			self.$content.html(alternateContent);
+			this.$content.html(alternateContent);
 		}
 	});
 
@@ -645,6 +676,19 @@
 				}
 				self.$content.addClass('ri-modal-element').append(specs.element);
 				self.handleAutoSizing();
+				/** 
+				 * Fired when modal content is loaded.
+				 * For `element` or `text`, it is fired immediately after content is injected.
+				 * For `ajax` it is fired after html is injected.
+				 * For `iframe` it is fired after the window inside the iframe is completely loaded (images and all).
+				 * @event Loaded
+				 * @example
+
+	modal.on('Loaded', function(event) {
+		attachSomeEventsToContent(this.$content);
+	});
+
+				 */					
 				self.publish('Loaded');
 			}
 			else if (specs.text) {
@@ -677,17 +721,89 @@
 				});
 			}
 			else if (specs.iframe) {
+				times = 0;
 				self.type = 'iframe';
 				url = specs.iframe + (specs.iframe.match(/\?/) ? '&' : '?') + self.options.iframe_query_suffix;
-				var $iframe = $(document.createElement('iframe')).attr({
+				self.$iframe = $(document.createElement('iframe')).attr({
 					frameborder: '0',
 					width: '100%',
 					height: '100%',
 					src: url
-				}).on('load', function() {
+				}).one('load', function() {
+					// first frame load is "onLoaded" event
 					self.publish('Loaded');
+				}).on('load', function() {
+					/** 
+					 * Fired (after navigation) when the window inside the iframe has fired the load event (only works with iframes in same domain)
+					 * @event FrameNavigateLoad
+					 * @example
+
+	modal.on('FrameNavigateLoad', function(event) {
+		$('a', event.document).each(highlightLink);
+	});
+
+					*/					
+					if (++times > 1) {
+						self.publish('FrameNavigateLoad');
+					}
 				});
-				self.$content.addClass('ri-modal-iframe').append($iframe);
+				self.$content.addClass('ri-modal-iframe').append(self.$iframe);
+				var poll = function() {
+					// catch document ready and frame navigation on iframes if domain is same
+					var frame, win, doc;
+					try {
+						if (
+							(frame = self.$iframe[0]) &&
+							(win = frame.contentWindow) &&
+							(doc = win.document) &&
+							doc.location != 'about:blank' &&
+							doc.readyState.match(/^(interactive|complete)$/)
+						) {
+							/** 
+							 * Fired when the document inside the iframe has fired DOMDocumentReady (only works with iframes in same domain)
+							 * @event FrameDocumentReady
+							 * @param {Window} window  The window object of the frame
+							 * @param {Document} document  The document of the window of the frame
+							 * @example
+
+	modal.on('FrameDocumentReady', function(event) {
+		$('a', event.document).each(highlightLink);
+	});
+
+							*/	
+						   /** 
+							* Fired (after navigation) when the document inside the iframe has fired DOMDocumentReady (only works with iframes in same domain)
+							* @event FrameNavigateReady
+							* @param {Window} window  The window object of the frame
+							* @param {Document} document  The document of the window of the frame
+							* @example
+
+	modal.on('FrameNavigateReady', function(event) {
+		$('.nav a', event.document).each(disableNavLink);
+	});
+
+							*/						
+							self.publish(times === 0 ? 'FrameDocumentReady' : 'FrameNavigateReady', {
+								window: win,
+								document: doc
+							});
+							$(win).on('unload', function () {
+								self.publish('FrameNavigateStart', {
+									window: win,
+									document: doc
+								});
+								setTimeout(poll, self.iframe_poll_interval);
+							});
+						}
+						else {
+							setTimeout(poll, self.iframe_poll_interval);
+						}
+					}
+					catch (e) {
+						// modal is closing or iframe domain is different
+					}
+				};
+				setTimeout(poll, self.iframe_poll_interval);				
 			}
 			else {
 				self.$content.addClass('ri-modal-empty');
@@ -804,7 +920,9 @@
 			self.$dialog.removeClass('ri-modal-draggable');
 			var $header = self.$dialog.find(self.options.drag_handle);
 			$header.off('mousedown.draggable');
-			self.$content.show();
+			if (parseFloat(self.$content.css('opacity') || 0) < 1) {
+				self.$content.css('opacity', 1);
+			}
 			return self;
 		},
 		/**
@@ -841,7 +959,7 @@
 						left: '0',
 						width: size.viewportWidth + 'px',
 						height: size.viewportHeight + 'px',
-						// bug: chrome fails to render cover if opacity begins at 0 
+						// browser bug: chrome fails to render cover if opacity begins at 0 
 						// (but if you inspect element it magically appears)
 						opacity: '0.001',
 						zIndex: RiModal.nextZIndex++
@@ -1327,7 +1445,7 @@
 					dataOptions[option] = this.getAttribute(attr);		
 				}
 			}
-			var modal = new RiModal( $.extend(dataOptions, {origin:this}, options) );
+			var modal = new RiModal( $.extend(true, dataOptions, {origin:this}, options) );
 			modal.open();
 		};
 		if (options.delegate) {
@@ -1355,7 +1473,7 @@
 	var docEl = document.documentElement;
 	var $docEl = $(docEl); // same as $('html')
 		
-	// internal increment to generate id for each modal
+	// internal increment to generate id for each modal instance
 	var uid = 1;	
 	
 	// helper to prevent resize handler firing in rapid succession
@@ -1365,6 +1483,14 @@
 			clearTimeout(handle);
 			handle = setTimeout(callback, ms);
 		};
+	}
+	
+	// helper to interpret "true", "false", "t", "f", "1", "0", 1, 0, true, false
+	function booleanize(value) {
+		if (typeof value === 'string') {
+			return value.match(/^(true|t|1)$/i);
+		}
+		return !!value;
 	}
 	
 })(jQuery, window, document);
